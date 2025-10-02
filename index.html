@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Web Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .calculator {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      width: 320px;
+    }
+    .operation {
+      width: 100%;
+      font-size: 18px;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .result {
+      font-size: 20px;
+      font-weight: bold;
+      text-align: right;
+      margin-bottom: 15px;
+      color: #333;
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 15px;
+      margin: 5px 2px;
+      background: #0073e6;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #005bb5;
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <input type="text" id="operation" class="operation" placeholder="Enter calculation...">
+    <div id="result" class="result">= 0</div>
+    <button class="btn" id="sheetBtn">Send to Google Sheet</button>
+    <button class="btn" id="clearBtn">Clear</button>
+  </div>
+
+  <script>
+    const operationBox = document.getElementById("operation");
+    const resultBox = document.getElementById("result");
+
+    // Format number with thousands separator
+    function formatNumber(num) {
+      return Number(num).toLocaleString();
+    }
+
+    // Calculate live result
+    function calculate() {
+      try {
+        let expr = operationBox.value.replace(/[^0-9+\-*/().]/g, "");
+        if (expr) {
+          let res = Function('"use strict";return (' + expr + ')')();
+          resultBox.textContent = "= " + formatNumber(res);
+        } else {
+          resultBox.textContent = "= 0";
+        }
+      } catch {
+        resultBox.textContent = "Error";
+      }
+    }
+
+    // Smart operator handling
+    operationBox.addEventListener("input", () => {
+      operationBox.value = operationBox.value.replace(/([+\-*/]){2,}/g, "$1");
+      calculate();
+    });
+
+    // Keyboard shortcuts
+    operationBox.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        operationBox.value = "(" + operationBox.value + ")";
+        calculate();
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        operationBox.value = "";
+        resultBox.textContent = "= 0";
+      }
+    });
+
+    // Clear button
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      operationBox.value = "";
+      resultBox.textContent = "= 0";
+    });
+
+    // Send to Google Sheet
+    document.getElementById("sheetBtn").addEventListener("click", async () => {
+      let operation = operationBox.value;
+      let result = resultBox.textContent.replace("= ", "");
+      
+      if (!operation) {
+        alert("Nothing to send!");
+        return;
+      }
+
+      try {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbzJku0sunJwHhBWJ-0H1PT0YqVKoP2aZwrH_Lloq7BitsrafhybKrvU8n9RQAe1PqzR/exec", {
+          method: "POST",
+          body: JSON.stringify({ operation, result }),
+          headers: { "Content-Type": "application/json" }
+        });
+        const text = await response.text();
+        alert("Sent to Google Sheet: " + text);
+      } catch (err) {
+        alert("Error sending to Sheet: " + err);
+      }
+    });
+  </script>
+</body>
+</html>
